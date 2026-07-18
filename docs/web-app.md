@@ -87,6 +87,14 @@ The bottom row is a 2-column grid (`2fr 1fr`): Active Projects takes two-thirds,
 
 ---
 
+## Fleet Send Page
+
+`client/src/pages/FleetSend.jsx`
+
+Operator-driven one-file-to-many workflow kept separate from the automatic Project/Part scheduler. The operator chooses Upload only or Upload & print, selects a required material/color, stays within one exact printer-model lane, and explicitly selects target printers. Preflight surfaces incompatibilities and groups duplicate filenames into one conflict summary with a Replace or Skip decision for each affected printer. Execution requires one final confirmation and then reports each target's upload, verification, start, completion, skip, or failure state inline.
+
+When built with `VITE_DEMO_MODE=true`, this page becomes the landing route and uses representative data without making API or printer requests. The dashboard preview uses this mode so its controls are safe to explore. Production mode uses `/api/fleet-send` and retains the normal application navigation.
+
 ## Fleet Page
 
 `client/src/pages/Fleet.jsx`

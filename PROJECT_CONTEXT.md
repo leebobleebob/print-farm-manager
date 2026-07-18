@@ -27,3 +27,9 @@ This fork evaluates `joeltelling/print-farm-manager` as the long-term local flee
 ## Baseline proof
 
 On 2026-07-18, upstream `main` passed 28 Jest suites / 430 tests and the Vite production build under Node 22.23.1. After the initial Fleet Send driver, service, and API slices, the fork passes 30 suites / 452 tests and the production build. The canonical shared-root path contains spaces, which breaks the native `better-sqlite3` source build; dependency installation and tests therefore run from a temporary space-free clone while the canonical repository remains here.
+
+## Fleet Send preview
+
+The first operator UI is published as a demo-safe dashboard preview at `http://100.125.73.7:8765/centauri-sentry-next/`. Demo mode uses representative printers and sends no API or printer commands. Its reading order is intentionally file/action first, exact-model printer selection second, then one duplicate-conflict HUD and an inline confirmation/progress surface. The file/action panel is the focal region, printer selection uses a responsive card grid, and the cyan/violet telemetry treatment is the single repeated visual motif. CC1 and CC2 remain separate model lanes.
+
+Desktop and touch-mobile interaction proof covers preflight, per-printer Replace/Skip decisions, one-shot confirmation, simulated upload/start, and a blocked filament mismatch. Evidence is under `verification/fleet-send-preview-interaction/`; the generic responsive proof is under `verification/fleet-send-preview-first/`.

@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-07-18: Fleet Send operator page and safe dashboard preview
+
+Added the React operator workflow for staging one file, choosing Upload only or Upload & print, selecting compatible printers in an exact-model lane, checking requested filament, resolving every duplicate in one fleet conflict summary, confirming once, and following per-printer progress. Routine progress remains inline; only duplicate decisions use the focused HUD.
+
+The dashboard review build runs in an explicit demo mode with representative fleet data. It does not request the Fleet Send API and cannot send a printer command. Desktop and touch-mobile automation covers the complete simulated Replace/Skip and guarded-send path, including a filament mismatch block, with no overflow or browser/request errors.
+
+### Changes
+
+- `client/src/pages/FleetSend.jsx`, `FleetSend.css`: Fleet Send setup, selection, conflict, confirmation, and progress interface.
+- `client/src/App.jsx`: Fleet Send navigation and route; isolated demo-mode landing behavior and deployable base path.
+- `scripts/verify-fleet-send-preview.mjs`: responsive interaction proof for the demo review build.
+
 ## 2026-07-18: one-shot Fleet Send session core
 
 Added the server-side session service for staging one immutable file and applying it to an explicit set of exact-model printers without entering the automatic Project/Part scheduler. Preflight classifies each target independently (ready, duplicate, busy, held, inactive, filament mismatch, unsupported, or failed), and execution requires a Replace/Skip decision for every duplicate before consuming the session once.

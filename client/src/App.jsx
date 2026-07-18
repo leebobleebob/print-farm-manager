@@ -8,16 +8,23 @@ import Projects from './pages/Projects';
 import Jobs from './pages/Jobs';
 import Settings from './pages/Settings';
 import Decommissioned from './pages/Decommissioned';
+import FleetSend from './pages/FleetSend';
 
 const NAV_ITEMS = [
   { to: '/',               label: 'Dashboard' },
   { to: '/fleet',          label: 'Fleet' },
+  { to: '/fleet-send',     label: 'Fleet Send' },
   { to: '/printers',       label: 'Printers',      end: true },
   { to: '/projects',       label: 'Projects' },
   { to: '/jobs',           label: 'Jobs' },
   { to: '/decommissioned', label: 'Decommissioned' },
   { to: '/settings',       label: 'Settings' },
 ];
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+const ACTIVE_NAV_ITEMS = DEMO_MODE
+  ? [{ to: '/', label: 'Fleet Send' }]
+  : NAV_ITEMS;
 
 const navLinkStyle = ({ isActive }) => ({
   display: 'block',
@@ -36,6 +43,10 @@ export default function App() {
   // Operator-configurable farm name (Settings → Farm Name)
   const [farmName, setFarmName] = useState('Print Farm');
   useEffect(() => {
+    if (DEMO_MODE) {
+      setFarmName('Sentry Next Preview');
+      return undefined;
+    }
     fetch('/api/settings')
       .then(r => r.json())
       .then(data => { if (data.farm_name) setFarmName(data.farm_name); })
@@ -49,7 +60,7 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       {/* Responsive layout: sidebar on desktop, top nav bar on mobile */}
       <style>{`
         #layout { display: flex; min-height: 100vh; }
@@ -71,7 +82,7 @@ export default function App() {
             <div style={{ fontWeight: 800, fontSize: 15, color: '#e2e8f0', lineHeight: 1.3 }}>{farmName}</div>
             <div style={{ fontWeight: 400, fontSize: 11, color: '#475569' }}>Print Farm Manager</div>
           </div>
-          {NAV_ITEMS.map((item) => (
+          {ACTIVE_NAV_ITEMS.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/' || !!item.end} style={navLinkStyle}>
               {item.label}
             </NavLink>
@@ -81,7 +92,7 @@ export default function App() {
         {/* Top nav bar (mobile) */}
         <nav id="topbar">
           <span style={{ fontWeight: 800, fontSize: 14, color: '#e2e8f0', marginRight: 8 }}>{farmName}</span>
-          {NAV_ITEMS.map((item) => (
+          {ACTIVE_NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -104,8 +115,9 @@ export default function App() {
         {/* Main content */}
         <main id="main">
           <Routes>
-            <Route path="/"                element={<Dashboard />} />
+            <Route path="/"                element={DEMO_MODE ? <FleetSend /> : <Dashboard />} />
             <Route path="/fleet"           element={<Fleet />} />
+            <Route path="/fleet-send"      element={<FleetSend />} />
             <Route path="/printers"        element={<Printers />} />
             <Route path="/printers/:id"    element={<PrinterDetail />} />
             <Route path="/projects"        element={<Projects />} />
