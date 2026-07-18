@@ -16,6 +16,8 @@ const fs      = require('fs');
 const db             = require('./db');
 const PrinterPoller  = require('./poller');
 const JobScheduler   = require('./scheduler');
+const FleetSendStore = require('./fleet-send');
+const { getDriver }  = require('./drivers');
 const notifications  = require('./notifications');
 const events         = require('./events');
 const backup         = require('./backup');
@@ -31,6 +33,11 @@ const modelsRouter       = require('./routes/models')(db);
 const groupsRouter       = require('./routes/groups')(db);
 const filamentsRouter    = require('./routes/filaments')(db);
 const printerJobsRouter  = require('./routes/printer-jobs')(db);
+const fleetSendStore      = new FleetSendStore(db, {
+  root: path.join(__dirname, 'data', 'fleet-send'),
+  getDriver,
+});
+const fleetSendRouter     = require('./routes/fleet-send')(fleetSendStore);
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +56,7 @@ app.use('/api/settings',        settingsRouter);
 app.use('/api/models',          modelsRouter);
 app.use('/api/groups',          groupsRouter);
 app.use('/api/filaments',       filamentsRouter);
+app.use('/api/fleet-send',      fleetSendRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

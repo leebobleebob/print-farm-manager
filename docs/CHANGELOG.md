@@ -8,12 +8,13 @@ Added the server-side session service for staging one immutable file and applyin
 
 Upload-only verifies the remote filename and byte size and never calls the print-start function. Upload-and-print performs the same verification, then re-reads the printer row and obtains a fresh driver status before starting only targets that are still active, unheld, exact-model, filament-compatible, and idle. A target becoming busy does not block other selected printers. Per-target progress events cover preflight, replacement, upload bytes, verification, start, completion, skip, and failure.
 
-This is an internal service slice only; HTTP routes and the React page are still to follow. Tests use an in-memory database and fully mocked driver, including one file sent to two printers, duplicate replacement, upload-only, one-shot consumption, a fresh busy-state block, and an unchanged `completed_qty` assertion. No physical printer command was issued.
+The service is exposed through multipart preflight, public session state, filtered server-sent progress, explicitly confirmed execution, and cancel endpoints. The React page is still to follow. Tests use an in-memory database and fully mocked driver, including one file sent to two printers, duplicate replacement, upload-only, one-shot consumption, a fresh busy-state block, an unchanged `completed_qty` assertion, temporary-upload cleanup, and the confirmation boundary. No physical printer command was issued.
 
 ### Changes
 
 - `server/fleet-send.js`: new bounded-concurrency, expiring, one-shot Fleet Send session store with immutable staging, conflict decisions, remote size verification, fresh pre-upload/pre-start checks, and progress events.
-- `server/tests/fleet-send.test.js`: six service tests covering the initial many-printer safety and accounting contract.
+- `server/routes/fleet-send.js`, `server/index.js`: mounted API for multipart preflight, redacted session state, SSE progress, explicitly confirmed execution, and cancel.
+- `server/tests/fleet-send.test.js`, `server/tests/fleet-send-route.test.js`: service and route coverage for the initial many-printer safety, accounting, cleanup, and confirmation contract.
 
 ## 2026-07-18: optional Fleet Send file capabilities for Centauri Carbon
 

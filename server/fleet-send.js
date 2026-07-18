@@ -212,6 +212,10 @@ class FleetSendStore extends EventEmitter {
     return session;
   }
 
+  getPublic(id) {
+    return publicSession(this.get(id));
+  }
+
   cancel(id) {
     const session = this.sessions.get(id);
     if (!session) return;
@@ -317,4 +321,3 @@ class FleetSendStore extends EventEmitter {
 }
 
 module.exports = FleetSendStore;
-

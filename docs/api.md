@@ -1,5 +1,49 @@
 # API Reference
 
+## Fleet Send
+
+Fleet Send is an operator-driven, one-shot upload workflow separate from the automatic Project/Part scheduler. It never updates Part completion counts.
+
+### `POST /api/fleet-send/preflight`
+
+Multipart form fields:
+
+- `file` — the single sliced file to stage.
+- `model` — exact internal printer model; every selected printer must match.
+- `printer_ids` — JSON array of printer IDs.
+- `action` — `upload` or `upload_print`.
+- `required_material`, `required_color` — optional recorded-filament checks.
+
+Returns `201` with a short-lived session and per-printer target states. Duplicate states require a later Replace or Skip decision. Responses do not include the staged filesystem path, file digest, credentials, or other private printer fields.
+
+### `GET /api/fleet-send/:id`
+
+Returns public state for an unexpired session, including per-target preflight and progress. Returns `404` when unknown and `410` when expired.
+
+### `GET /api/fleet-send/:id/events`
+
+Server-sent event stream filtered to the requested session. Each event contains the printer ID, stage, message, bytes sent, total bytes, and percentage.
+
+### `POST /api/fleet-send/:id/execute`
+
+JSON body:
+
+```json
+{
+  "confirmed": true,
+  "decisions": {
+    "2": "replace",
+    "4": "skip"
+  }
+}
+```
+
+Every duplicate must have a `replace` or `skip` decision. The session is consumed once. Upload-and-print starts only the current session's verified remote file after fresh database and driver idle checks.
+
+### `DELETE /api/fleet-send/:id`
+
+Cancels the session and removes its staged file. Returns `204`.
+
 In **production** (after `npm run build && npm start`) the Express server at port 3000 serves both the API and the React client. Access from any browser on the LAN via `http://[server-ip]:3000`.
 
 In **development** (`npm run dev`) the Vite dev server at port 5173 proxies all `/api/*` requests to port 3000.
