@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-07-18: one-shot Fleet Send session core
+
+Added the server-side session service for staging one immutable file and applying it to an explicit set of exact-model printers without entering the automatic Project/Part scheduler. Preflight classifies each target independently (ready, duplicate, busy, held, inactive, filament mismatch, unsupported, or failed), and execution requires a Replace/Skip decision for every duplicate before consuming the session once.
+
+Upload-only verifies the remote filename and byte size and never calls the print-start function. Upload-and-print performs the same verification, then re-reads the printer row and obtains a fresh driver status before starting only targets that are still active, unheld, exact-model, filament-compatible, and idle. A target becoming busy does not block other selected printers. Per-target progress events cover preflight, replacement, upload bytes, verification, start, completion, skip, and failure.
+
+This is an internal service slice only; HTTP routes and the React page are still to follow. Tests use an in-memory database and fully mocked driver, including one file sent to two printers, duplicate replacement, upload-only, one-shot consumption, a fresh busy-state block, and an unchanged `completed_qty` assertion. No physical printer command was issued.
+
+### Changes
+
+- `server/fleet-send.js`: new bounded-concurrency, expiring, one-shot Fleet Send session store with immutable staging, conflict decisions, remote size verification, fresh pre-upload/pre-start checks, and progress events.
+- `server/tests/fleet-send.test.js`: six service tests covering the initial many-printer safety and accounting contract.
+
 ## 2026-07-18: optional Fleet Send file capabilities for Centauri Carbon
 
 Started the protocol foundation for an operator-driven Fleet Send workflow without changing the automatic Project/Part scheduler. The existing Elegoo Centauri Carbon driver's combined `uploadAndPrint` operation is now composed from separate `uploadFile` and `startFile` functions, and the driver also exposes SDCP-backed `listFiles` and exact-file `deleteFile` operations. This makes upload-only, duplicate preflight, remote verification, and a later one-file-to-many operator flow possible without maintaining a second copy of the printer protocol.
