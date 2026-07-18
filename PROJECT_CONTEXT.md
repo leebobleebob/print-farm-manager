@@ -26,5 +26,4 @@ This fork evaluates `joeltelling/print-farm-manager` as the long-term local flee
 
 ## Baseline proof
 
-On 2026-07-18, upstream `main` passed 28 Jest suites / 430 tests and the Vite production build under Node 22.23.1. The canonical shared-root path contains spaces, which breaks the native `better-sqlite3` source build; dependency installation and tests therefore run from a temporary space-free clone while the canonical repository remains here.
-
+On 2026-07-18, upstream `main` passed 28 Jest suites / 430 tests and the Vite production build under Node 22.23.1. After the initial Fleet Send driver, service, and API slices, the fork passes 30 suites / 452 tests and the production build. The canonical shared-root path contains spaces, which breaks the native `better-sqlite3` source build; dependency installation and tests therefore run from a temporary space-free clone while the canonical repository remains here.

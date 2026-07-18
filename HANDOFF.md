@@ -21,6 +21,17 @@ Implement **Fleet Send**: stage one file, select many exact-model printers, pref
 
 The source design is `docs/sentry-fleet-send-design.md`. Start with test-only driver capability extraction and a server-side session service; do not issue real printer commands during automated verification. Real hardware proof comes later through the local dashboard using an operator-selected known-safe file.
 
+### Implemented on `codex/sentry-fleet-dispatch`
+
+- `522de40` — committed Fleet Send design and phased contribution plan.
+- `604fb72` — added non-breaking optional CC1 list/upload/start/delete capabilities; the existing scheduler still calls `uploadAndPrint`, which now composes the same upload and start functions.
+- `911d147` — added immutable, expiring, one-shot many-printer sessions with exact-model/filament/idle checks, duplicate decisions, remote byte verification, per-target isolation, and no Project/Part accounting writes.
+- `9668c2c` — mounted multipart preflight, public session, SSE progress, explicit execute, and cancel API routes.
+
+Current verification: official parallel `npm test` passes 30 suites / 452 tests; the two suites that flaked only when all tests were forced serial both pass alone, and the upstream-standard parallel suite is green. `npm run build` passes. All printer protocols remain mocked; no live hardware command was sent.
+
+Next action: build the React Fleet Send page against these APIs, verify the conflict HUD and per-printer progress with mocked/demo state, then add the CC2 file-list/delete protocol only after confirming a primary/proven source.
+
 ## Later tracks
 
 1. Extend decommissioned printers into a Clinic with repair stages, parts, notes, and history.
@@ -31,4 +42,3 @@ The source design is `docs/sentry-fleet-send-design.md`. Start with test-only dr
 ## Board task
 
 `task-agent-checkin-2026-07-18-codex-print-farm-manager-establish-sentry-next-upstream-fork-and-contribution-roadmap`
-
