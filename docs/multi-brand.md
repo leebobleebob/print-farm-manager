@@ -98,6 +98,30 @@ checkIfPrinting(printer)
 
 The driver registry (`server/drivers/index.js`) maps `printer.type → driver module`. The poller and scheduler call `getDriver(printer.type)` and never touch brand-specific code directly.
 
+### Optional Fleet Send capabilities
+
+Drivers may additionally expose four file-level operations for an operator-driven upload-only or guarded upload-and-print workflow:
+
+```js
+listFiles(printer)
+  → [{ filename, size }]
+
+uploadFile(printer, filePath, filename, { onProgress })
+  → actual remote filename
+
+startFile(printer, remoteFilename, options)
+  → resolves when the printer accepts the start command
+
+deleteFile(printer, remoteFilename)
+  → deletes only that exact file
+```
+
+`acceptedExtensions` advertises file extensions accepted by the driver. `getFleetSendCapabilities(type)` reports `supported`, `acceptedExtensions`, and any missing optional methods. These capabilities are deliberately not part of the required scheduler driver contract: a connector remains valid with the original four functions, and `uploadAndPrint` remains the scheduler entry point.
+
+The Centauri Carbon driver implements the complete optional set for `.gcode`. Its existing `uploadAndPrint` now composes `uploadFile` and `startFile`, so scheduler and operator-driven transfers share one protocol implementation. SDCP file listing is read from `/usb`; deletion accepts a bare filename and targets only `/usb/<filename>`.
+
+Centauri Carbon 2 does not yet advertise Fleet Send capability. Its existing chunked upload and MQTT start operations can be separated, but remote list/delete and verification must come from a confirmed protocol source before duplicate replacement is enabled.
+
 ---
 
 ## Files to Create

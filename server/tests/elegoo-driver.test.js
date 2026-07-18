@@ -18,6 +18,8 @@ beforeEach(() => {
     on: jest.fn(),
     Connect: jest.fn().mockResolvedValue(undefined),
     GetStatus: jest.fn(),
+    GetFiles: jest.fn().mockResolvedValue([]),
+    DeleteFiles: jest.fn().mockResolvedValue(undefined),
     UploadFile: jest.fn().mockResolvedValue({ Status: 'Complete' }),
     SendCommand: jest.fn().mockResolvedValue({ Data: { Data: { Ack: 0 } } }),
     Stop: jest.fn().mockResolvedValue(undefined),
@@ -208,6 +210,75 @@ describe('uploadAndPrint', () => {
   });
 });
 
+// ─── Fleet Send optional capabilities ────────────────────────────────────────
+
+describe('Fleet Send capabilities', () => {
+  test('lists USB files with normalized bare filenames and byte sizes', async () => {
+    const printer = nextPrinter();
+    mockClient.GetFiles.mockResolvedValueOnce([
+      { name: '/usb/part.gcode', type: 1, size: 1234 },
+      { name: '/usb/archive', type: 0 },
+      { Name: '/usb/other.gcode', Type: 1, FileSize: 5678 },
+    ]);
+
+    await expect(elegoo.listFiles(printer)).resolves.toEqual([
+      { filename: 'part.gcode', size: 1234 },
+      { filename: 'other.gcode', size: 5678 },
+    ]);
+    expect(mockClient.GetFiles).toHaveBeenCalledWith('/usb');
+  });
+
+  test('uploads without starting and returns the actual on-printer basename', async () => {
+    const printer = nextPrinter();
+    const remoteName = await elegoo.uploadFile(
+      printer,
+      '/tmp/1746000000000_part.gcode',
+      'part.gcode'
+    );
+
+    expect(remoteName).toBe('1746000000000_part.gcode');
+    expect(mockClient.UploadFile).toHaveBeenCalledTimes(1);
+    expect(mockClient.SendCommand).not.toHaveBeenCalled();
+  });
+
+  test('starts an already-uploaded exact filename without uploading again', async () => {
+    const printer = nextPrinter();
+    await elegoo.startFile(printer, 'part.gcode');
+
+    expect(mockClient.UploadFile).not.toHaveBeenCalled();
+    expect(mockClient.SendCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        Data: expect.objectContaining({
+          Cmd: 128,
+          Data: expect.objectContaining({ Filename: 'part.gcode' }),
+        }),
+      })
+    );
+  });
+
+  test('deletes only the exact bare filename from USB storage', async () => {
+    const printer = nextPrinter();
+    await elegoo.deleteFile(printer, 'part.gcode');
+    expect(mockClient.DeleteFiles).toHaveBeenCalledWith(['/usb/part.gcode']);
+  });
+
+  test.each(['../part.gcode', '/usb/part.gcode', 'folder/part.gcode'])(
+    'rejects unsafe remote filename %s',
+    async (filename) => {
+      const printer = nextPrinter();
+      await expect(elegoo.deleteFile(printer, filename)).rejects.toThrow('bare filename');
+      await expect(elegoo.startFile(printer, filename)).rejects.toThrow('bare filename');
+    }
+  );
+
+  test('advertises gcode support and all Fleet Send functions', () => {
+    expect(elegoo.acceptedExtensions).toEqual(['.gcode']);
+    for (const method of ['listFiles', 'uploadFile', 'startFile', 'deleteFile']) {
+      expect(typeof elegoo[method]).toBe('function');
+    }
+  });
+});
+
 // ─── cancelJob ────────────────────────────────────────────────────────────────
 
 describe('cancelJob', () => {
@@ -260,7 +331,7 @@ describe('checkIfPrinting', () => {
 // ─── Driver registry ──────────────────────────────────────────────────────────
 
 describe('driver registry (drivers/index.js)', () => {
-  const { getDriver } = require('../drivers');
+  const { getDriver, getFleetSendCapabilities } = require('../drivers');
 
   test('getDriver("elegoo-centauri") returns the elegoo driver', () => {
     const driver = getDriver('elegoo-centauri');
@@ -273,5 +344,22 @@ describe('driver registry (drivers/index.js)', () => {
   test('getDriver("prusa") still works alongside elegoo-centauri', () => {
     const driver = getDriver('prusa');
     expect(typeof driver.getStatus).toBe('function');
+  });
+
+  test('reports CC1 as Fleet Send capable without changing the required driver contract', () => {
+    expect(getFleetSendCapabilities('elegoo-centauri')).toEqual({
+      supported: true,
+      acceptedExtensions: ['.gcode'],
+      missing: [],
+    });
+  });
+
+  test('reports a legacy driver as unsupported instead of breaking scheduler use', () => {
+    const result = getFleetSendCapabilities('prusa');
+    expect(result.supported).toBe(false);
+    expect(result.missing).toEqual(expect.arrayContaining([
+      'listFiles', 'uploadFile', 'startFile', 'deleteFile',
+    ]));
+    expect(typeof getDriver('prusa').uploadAndPrint).toBe('function');
   });
 });

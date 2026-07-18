@@ -21,4 +21,18 @@ function getDriver(type) {
   return load();
 }
 
-module.exports = { getDriver };
+const FLEET_SEND_METHODS = ['listFiles', 'uploadFile', 'startFile', 'deleteFile'];
+
+function getFleetSendCapabilities(type) {
+  const driver = getDriver(type);
+  const missing = FLEET_SEND_METHODS.filter((method) => typeof driver[method] !== 'function');
+  return {
+    supported: missing.length === 0,
+    acceptedExtensions: Array.isArray(driver.acceptedExtensions)
+      ? [...driver.acceptedExtensions]
+      : [],
+    missing,
+  };
+}
+
+module.exports = { getDriver, getFleetSendCapabilities };

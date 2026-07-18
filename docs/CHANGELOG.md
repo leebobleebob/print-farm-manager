@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-07-18: optional Fleet Send file capabilities for Centauri Carbon
+
+Started the protocol foundation for an operator-driven Fleet Send workflow without changing the automatic Project/Part scheduler. The existing Elegoo Centauri Carbon driver's combined `uploadAndPrint` operation is now composed from separate `uploadFile` and `startFile` functions, and the driver also exposes SDCP-backed `listFiles` and exact-file `deleteFile` operations. This makes upload-only, duplicate preflight, remote verification, and a later one-file-to-many operator flow possible without maintaining a second copy of the printer protocol.
+
+The four new functions are optional capabilities rather than additions to the required driver contract. `getFleetSendCapabilities(type)` reports whether a driver implements the full set; legacy drivers remain valid and their existing scheduler behavior is unchanged. Remote mutation accepts only a bare filename and deletion is scoped to that exact name under `/usb`. All new behavior is covered with a mocked SDCP client; no real printer commands were issued.
+
+### Changes
+
+- `server/drivers/elegoo-centauri.js`: added `.gcode` capability metadata, normalized SDCP USB file listing, upload-only with optional progress callback, exact-file start, and exact-file delete; refactored `uploadAndPrint` to compose the same upload/start functions.
+- `server/drivers/index.js`: added non-breaking `getFleetSendCapabilities(type)` inspection for the optional four-function capability set.
+- `server/tests/elegoo-driver.test.js`: added mocked coverage for list/upload/start/delete separation, safe filename handling, capability metadata, and legacy-driver compatibility.
+- `docs/multi-brand.md`: documented the optional Fleet Send contract and current CC1 support boundary.
+
+No database, Project, Part, Job, scheduler, or `completed_qty` behavior changed. Fleet Send sessions and UI are not part of this slice.
+
 ## 2026-07-12: dispatch_batch_size means concurrent uploads, not printers considered per pass
 
 Joel batch-confirmed a stack of held printers via Fleet's "Set Ready (N)" button with `dispatch_batch_size` set to 5, and instead of 5 uploads running at once he saw 3 or 4. He walked through it precisely: some of the held printers had the wrong material or color loaded for the part they'd match, so the scheduler correctly found "no candidate" for them and moved on without creating a job, exactly as designed. The bug was in what happened next. `_sweepInBatches` chunked the confirmed printers into fixed slices of `dispatch_batch_size` and processed one slice at a time, waiting for the whole slice to settle before moving to the next. If a slice of 5 had only 1 real candidate, only 1 upload ran, and the scheduler moved on to the *next fixed slice of 5* instead of reaching further into the queue to make up the difference. Joel's framing was the fix: "if I have five set as my limit, then five should be uploading at once, not five being contacted at once with one of the five being able to print."

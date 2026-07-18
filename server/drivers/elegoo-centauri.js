@@ -12,6 +12,8 @@
 const SDCPPrinterWS = require('sdcp/SDCPPrinterWS');
 const path = require('path');
 
+const acceptedExtensions = ['.gcode'];
+
 // Map of printer.id → SDCPPrinterWS instance
 const connections = new Map();
 
@@ -138,18 +140,49 @@ async function getStatus(printer) {
   }
 }
 
-// ─── Upload & Print ───────────────────────────────────────────────────────────
+// ─── Fleet Send file capabilities ────────────────────────────────────────────
 
-// Uploads the G-code file to the printer and starts the print.
-// gcodeFullPath must be a resolved absolute path that already exists on disk.
-// filename is the bare filename (e.g. "part.gcode") — used as the remote filename.
-async function uploadAndPrint(printer, gcodeFullPath, filename) {
+function requireBareFilename(filename) {
+  if (!filename || filename !== path.basename(filename) || /[\\/]/.test(filename)) {
+    throw new Error('Remote file must be a bare filename');
+  }
+  return filename;
+}
+
+async function listFiles(printer) {
   const client = await getConnection(printer);
+  const files = await client.GetFiles('/usb');
+
+  return (files || []).flatMap((entry) => {
+    const type = entry.type ?? entry.Type;
+    if (Number(type) === 0) return [];
+
+    const rawName = entry.name ?? entry.Name ?? entry.filename ?? entry.Filename;
+    if (!rawName) return [];
+    const filename = path.posix.basename(String(rawName).replace(/\\/g, '/'));
+    const rawSize = entry.size ?? entry.Size ?? entry.FileSize ?? 0;
+    const size = Number(rawSize);
+    return [{ filename, size: Number.isFinite(size) ? size : 0 }];
+  });
+}
+
+async function uploadFile(printer, gcodeFullPath, filename, options = {}) {
+  const client = await getConnection(printer);
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
 
   console.log(`[elegoo] Uploading ${filename} to ${printer.name}…`);
 
   await client.UploadFile(gcodeFullPath, {
     ProgressCallback: (progress) => {
+      if (onProgress) {
+        const sent = Number(
+          progress.BytesSent ?? progress.Transferred ?? progress.Loaded ?? progress.Current ?? 0
+        );
+        const total = Number(
+          progress.TotalBytes ?? progress.Total ?? progress.FileSize ?? 0
+        );
+        if (Number.isFinite(sent) && Number.isFinite(total)) onProgress(sent, total);
+      }
       if (progress.Status === 'Uploading') {
         process.stdout.write(`\r[elegoo] ${printer.name} upload: ${progress.Status}`);
       } else {
@@ -158,23 +191,28 @@ async function uploadAndPrint(printer, gcodeFullPath, filename) {
     },
   });
 
+  return path.basename(gcodeFullPath);
+}
+
+async function startFile(printer, remoteName) {
+  requireBareFilename(remoteName);
+  const client = await getConnection(printer);
+
   console.log(`[elegoo] Upload complete — waiting 1s before start on ${printer.name}`);
 
   // The slicer spec recommends a 1-second delay between upload completion and Start
   // to give the firmware time to close the file before processing the print command.
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  // sdcp's UploadFile uses path.basename(gcodeFullPath) as the on-printer filename.
   // We bypass client.Start() because the sdcp library sends an incomplete payload
   // ({Filename, Startlayer} only). The Centauri Carbon firmware requires additional
   // fields and crashes when they are missing.
   // Source: ElegooSlicer repo — elegoo-link Cmd 128 implementation.
-  const onPrinterFilename = path.basename(gcodeFullPath);
   const response = await client.SendCommand({
     Data: {
       Cmd: 128,
       Data: {
-        Filename:           onPrinterFilename,
+        Filename:           remoteName,
         StartLayer:         0,
         Calibration_switch: 0,
         PrintPlatformType:  1,
@@ -202,6 +240,29 @@ async function uploadAndPrint(printer, gcodeFullPath, filename) {
   console.log(`[elegoo] Print started on ${printer.name}`);
 }
 
+async function deleteFile(printer, remoteName) {
+  requireBareFilename(remoteName);
+  const client = await getConnection(printer);
+  await client.DeleteFiles([`/usb/${remoteName}`]);
+}
+
+// ─── Upload & Print ───────────────────────────────────────────────────────────
+
+// Uploads the G-code file to the printer and starts the print.
+// gcodeFullPath must be a resolved absolute path that already exists on disk.
+// filename is the bare filename (e.g. "part.gcode") — used as the remote filename.
+async function uploadAndPrint(printer, gcodeFullPath, filename) {
+  // sdcp's UploadFile uses path.basename(gcodeFullPath) as the on-printer filename.
+  // Return that actual name from uploadFile so the scheduler and Fleet Send always
+  // start the exact file transferred, even when multer prepended a timestamp.
+  const onPrinterFilename = path.basename(gcodeFullPath);
+  const uploadedName = await uploadFile(printer, gcodeFullPath, filename);
+  if (uploadedName !== onPrinterFilename) {
+    throw new Error(`Upload returned unexpected remote filename: ${uploadedName}`);
+  }
+  await startFile(printer, uploadedName);
+}
+
 // ─── Cancel ──────────────────────────────────────────────────────────────────
 
 async function cancelJob(printer) {
@@ -227,4 +288,14 @@ async function checkIfPrinting(printer) {
   }
 }
 
-module.exports = { getStatus, uploadAndPrint, cancelJob, checkIfPrinting };
+module.exports = {
+  acceptedExtensions,
+  getStatus,
+  listFiles,
+  uploadFile,
+  startFile,
+  deleteFile,
+  uploadAndPrint,
+  cancelJob,
+  checkIfPrinting,
+};
