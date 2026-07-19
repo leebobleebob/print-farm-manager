@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-18: responsive command-center dashboard
+
+Fixed the existing dashboard's phone layout so the command-center header, all four statistic cards, model rows, and status legend fit a narrow viewport instead of being clipped beyond the right edge. Desktop composition remains unchanged.
+
+### Changes
+
+- `client/src/pages/Dashboard.jsx`: added focused responsive classes and a two-column mobile statistic grid, wrapped fleet rows, and a compact mobile header.
+- `scripts/verify-integrated-app.mjs`: added mounted-route desktop and touch-mobile checks for complete navigation, fleet identity, decommissioned records, clipping, overflow, and browser/request errors.
+
 ## 2026-07-18: Fleet Send operator page and safe dashboard preview
 
 Added the React operator workflow for staging one file, choosing Upload only or Upload & print, selecting compatible printers in an exact-model lane, checking requested filament, resolving every duplicate in one fleet conflict summary, confirming once, and following per-printer progress. Routine progress remains inline; only duplicate decisions use the focused HUD.

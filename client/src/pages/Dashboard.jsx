@@ -83,7 +83,7 @@ const ROW_STATUSES = ['PRINTING', 'FINISHED', 'IDLE', 'ERROR', 'STOPPED', 'OFFLI
 
 function RowSummary({ group }) {
   return (
-    <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
+    <div className="dashboard-row-summary" style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
       {ROW_STATUSES.map(s => {
         const count = group.filter(p => {
           const isAwaiting = p.is_held === 1 && (p.status === 'FINISHED' || p.status === 'IDLE' || p.status === 'STOPPED');
@@ -189,15 +189,63 @@ export default function Dashboard() {
       }}
     >
 
+      <style>{`
+        @media (max-width: 600px) {
+          .dashboard-header {
+            height: auto !important;
+            min-height: 0;
+            padding: 14px 16px !important;
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px 16px;
+          }
+          .dashboard-brand { min-width: 0; }
+          .dashboard-utilization {
+            justify-self: end;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 4px !important;
+          }
+          .dashboard-utilization-label { display: none; }
+          .dashboard-clock {
+            grid-column: 1 / -1;
+            width: 100%;
+            justify-content: space-between;
+            gap: 10px !important;
+          }
+          .dashboard-content { padding: 16px 0 !important; }
+          .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+          .dashboard-stat-card {
+            min-width: 0;
+            padding: 13px 14px !important;
+            gap: 10px !important;
+          }
+          .dashboard-stat-value { font-size: 40px !important; }
+          .dashboard-fleet-row {
+            align-items: flex-start !important;
+            flex-wrap: wrap;
+          }
+          .dashboard-model-label {
+            width: 100% !important;
+            display: flex;
+            gap: 6px;
+            text-align: left !important;
+          }
+          .dashboard-printer-cells { width: 100%; flex-basis: 100%; }
+          .dashboard-row-summary { width: 100%; }
+          .dashboard-legend { flex-wrap: wrap; gap: 10px 14px !important; }
+        }
+      `}</style>
+
       {/* ── HEADER ────────────────────────────────────────────────────────── */}
-      <div style={{
+      <div className="dashboard-header" data-testid="dashboard-header" style={{
         background: '#0d1117', borderBottom: '1px solid #1e2433',
         padding: '0 28px', height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
 
         {/* Left: branding */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="dashboard-brand" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 4, height: 36, background: '#1d4ed8', borderRadius: 2, flexShrink: 0 }} />
           <div>
             <div style={{ fontWeight: 800, fontSize: 20, letterSpacing: '0.05em', color: '#f1f5f9' }}>
@@ -210,8 +258,8 @@ export default function Dashboard() {
         </div>
 
         {/* Center: utilization */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontSize: 13, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <div className="dashboard-utilization" style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span className="dashboard-utilization-label" style={{ fontSize: 13, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Fleet Utilization
           </span>
           <span style={{ fontSize: 32, fontWeight: 800, color: '#3b82f6', fontVariantNumeric: 'tabular-nums' }}>
@@ -223,7 +271,7 @@ export default function Dashboard() {
         </div>
 
         {/* Right: clock + TV mode button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div className="dashboard-clock" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 700, color: '#60a5fa', lineHeight: 1 }}>
               {formatTime(clock)}
@@ -247,18 +295,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="dashboard-content" style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* ── STAT CARDS ──────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {STAT_CARDS.map(({ key, label, color, accent, help }) => (
-            <div key={key} title={help} style={{
+            <div className="dashboard-stat-card" data-testid="dashboard-stat-card" key={key} title={help} style={{
               background: '#1e2433', borderRadius: 8,
               padding: '16px 20px',
               display: 'flex', alignItems: 'center', gap: 18,
               borderLeft: `4px solid ${accent}`,
             }}>
-              <div style={{
+              <div className="dashboard-stat-value" style={{
                 fontSize: 52, fontWeight: 800, color, lineHeight: 1,
                 fontVariantNumeric: 'tabular-nums',
               }}>
@@ -286,10 +334,10 @@ export default function Dashboard() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {Object.entries(grouped).map(([model, group]) => (
-              <div key={model} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="dashboard-fleet-row" key={model} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 
                 {/* Model label */}
-                <div style={{ width: 76, flexShrink: 0, textAlign: 'right' }}>
+                <div className="dashboard-model-label" style={{ width: 76, flexShrink: 0, textAlign: 'right' }}>
                   <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
                     {MODEL_LABELS[model] || model}
                   </div>
@@ -297,7 +345,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Printer cells */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, flex: 1 }}>
+                <div className="dashboard-printer-cells" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, flex: 1 }}>
                   {group.map(printer => {
                     const c = cellColors(printer);
                     return (
@@ -330,7 +378,7 @@ export default function Dashboard() {
           </div>
 
           {/* Color legend */}
-          <div style={{
+          <div className="dashboard-legend" style={{
             display: 'flex', gap: 18, marginTop: 14,
             paddingTop: 12, borderTop: '1px solid #1e2433',
           }}>
@@ -484,5 +532,4 @@ export default function Dashboard() {
     </div>
   );
 }
-
 

@@ -58,6 +58,8 @@ Navigation uses `react-router-dom` `<NavLink>` — active links are highlighted 
 
 `client/src/pages/Dashboard.jsx`
 
+At widths up to 600 px, the command-center header reflows into two rows, statistic cards use a two-column grid, fleet model labels and summaries wrap above and below their printer cells, and the legend wraps. All dashboard metrics remain visible without horizontal page scrolling.
+
 TV-optimized command center intended to be shown full-screen on a large monitor or TV in the print farm. Polls `GET /api/dashboard` every 15 seconds (matching the Fleet page). A live clock ticks every second client-side.
 
 **⛶ TV Mode button:** calls `element.requestFullscreen()` on the dashboard container — the sidebar disappears and the dashboard fills the screen. Use the browser's Escape key or fullscreen API to exit.
